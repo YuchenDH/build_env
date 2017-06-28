@@ -3,10 +3,25 @@ set -e
 set -x
 
 #This is current installing path
-cd /opt/X11R7
+export workpath="/opt/X11R7"
 
-CURRENT_PATH=`pwd`
+rm -rf $workpath
+
+if [[ -d ${workpath} ]]; then
+	cd ${workpath}
+else
+	mkdir ${workpath}
+	cd ${workdpath}
+fi
+
+CURRENT_PATH=${workpath}
 DAY=`date +"%Y-%m-%d-%H-%M"`
+
+
+init()
+{
+apt-get install autoconf make libtool libdrm2 libdrm-intel1 libdrm-radeon1 libdrm-nouveau2
+}
 
 
 #install libxml2
@@ -21,12 +36,12 @@ DAY=`date +"%Y-%m-%d-%H-%M"`
 #All components are installed under /opt/X11R7/
 setenv()
 {
-export YAMI_ROOT_DIR="${CURRENT_PATH}/yami/"
+export YAMI_ROOT_DIR="${CURRENT_PATH}/yami"
 export VAAPI_PREFIX="${YAMI_ROOT_DIR}/vaapi"
 export LIBYAMI_PREFIX="${YAMI_ROOT_DIR}/libyami"
 ADD_PKG_CONFIG_PATH="${VAAPI_PREFIX}/lib/pkgconfig/:${LIBYAMI_PREFIX}/lib/pkgconfig/"
 ADD_LD_LIBRARY_PATH="${VAAPI_PREFIX}/lib/:${LIBYAMI_PREFIX}/lib/"
-ADD_PATH="${VAAPI_PREFIX}/bin/"
+ADD_PATH="${VAAPI_PREFIX}/bin"
 
 PLATFORM_ARCH_64=`uname -a | grep x86_64`
 if [ -n "$PKG_CONFIG_PATH" ]; then
@@ -122,7 +137,7 @@ build_driver()
 
     cd ${CURRENT_PATH}/libva
     echo  -e "\n---build ${CURRENT_PATH}/libva---\n"
-    git clean -dxf && ./autogen.sh --prefix=$VAAPI_PREFIX --enable-wayland && make -j8 &&  make install
+    git clean -dxf && ./autogen.sh --subdir-objects --prefix=$VAAPI_PREFIX --enable-wayland && make -j8 &&  make install
     if [ $? -ne 0 ];then
         echo -e "build ${CURRENT_PATH}/libva  \t fail"
     else
@@ -358,13 +373,12 @@ function update_datebase_yamiinfo()
         fi
 
 }
-
-while [ $# -gt 2 ]
+while [ $# -gt 0 ]
 do
 	case $1 in
 		-v|--version )
 		shift
-		while [ $# -gt 2]
+		while [ $# -gt 1]
 		do
 			case $1 in
 				libyami )
@@ -411,7 +425,7 @@ do
 		fi
 
 		else
-			while [ $# -gt 2]
+			while [ $# -gt 1]
 			do
 				case $1 in
 					libyami)
@@ -443,16 +457,25 @@ do
 					echo "Unknown component name!"
 					echo "Usage: -u|--update [COMPONENT_NAME]"
 					echo "Components include libyami, libyami_utils, libva, intel-vaapi-driver"
+					break
 						;;
 				esac
 			done
 		fi
 			;;
+		-i|--initialize )
+		shift
+		echo "Initializing basic environment for new machine..."
+		init
+		echo "Initialization completed!"
+			;;
+
 		* )
 		shift
 		echo "Unknown argument!"
 		echo "Usage: -v|--version [COMPONENT_NAME] [GIT_TAG|COMMIT]"
-		echo "       -u|--update [COMPONENT_NAME] (default: update all components"
+		echo "       -u|--update [COMPONENT_NAME] (default: update all components)"
+		break
 			;;
 	esac
 done
@@ -484,7 +507,7 @@ update()
 		if [[ $(git rev-parse HEAD) == $(git rev-parse @{u}) ]]; then
 			echo "${CURRENT_PATH}/libva already up-tp-date."
 		else
-			git pull && git clean -dxf && ./autogen.sh --prefix=$VAAPI_PREFIX --enable-wayland && make -j8 &&  make install
+			git pull && git clean -dxf && ./autogen.sh --subdir-objects --prefix=$VAAPI_PREFIX --enable-wayland && make -j8 &&  make install
 			echo -e "\nupdate ${CURRENT_PATH}/libva done"
 		fi
 			;;
@@ -538,9 +561,8 @@ update()
 	esac
 }
 
-build_id=$1
 setenv
-if [[${UPDATE_FLAG}]]; then
+if [-z ${UPDATE_FLAG}]; then
 	update
 else
 	build_driver
@@ -548,7 +570,7 @@ fi
 #build_release_driver
 #build_cmrt_hybrid_driver
 #build_ffmpeg
-#build_libyami_internal
-#build_libyami_utils
+build_libyami_internal
+build_libyami_utils
 show_details
 #update_datebase_yamiinfo
