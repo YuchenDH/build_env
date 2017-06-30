@@ -21,7 +21,7 @@ init()
 echo "Installing basic system requirement..."
 apt-get install g++ autoconf make libtool libdrm2 libdrm-intel1 libdrm-radeon1 libdrm-nouveau2 libdrm-dev texinfo 
 #apt-get install libexpat-dev libxml2-dev
-
+apt-get install libx11-dev
 #echo "Installing libffi as a part of wayland"
 #git clone git://github.com/atgreen/libffi.git --single-branch
 #cd libffi-3.1 && ./configure && make && make install && cd ..
