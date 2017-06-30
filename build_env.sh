@@ -18,7 +18,18 @@ DAY=`date +"%Y-%m-%d-%H-%M"`
 
 init()
 {
-apt-get install autoconf make libtool libdrm2 libdrm-intel1 libdrm-radeon1 libdrm-nouveau2 libdrm-dev
+echo "Installing basic system requirement..."
+apt-get install g++ autoconf make libtool libdrm2 libdrm-intel1 libdrm-radeon1 libdrm-nouveau2 libdrm-dev texinfo 
+#apt-get install libexpat-dev libxml2-dev
+
+#echo "Installing libffi as a part of wayland"
+#git clone git://github.com/atgreen/libffi.git --single-branch
+#cd libffi-3.1 && ./configure && make && make install && cd ..
+
+#echo "Installing waylad..."
+#git clone https://anongit.freedesktop.org/git/wayland/wayland.git --single-branch
+#cd wayland && ./autogen.sh --prefix="/opt/" --disable-documentation && make && make install && cd ..
+
 }
 
 
@@ -63,7 +74,6 @@ build_driver()
     cd ${CURRENT_PATH}/
     if [[ -d "libva" ]];then
        	cd libva
-       	make uninstall
        	if [[ ${LIBVA_TAG} ]]; then
        		git reset ${LIBVA_TAG} --hard
        	else
@@ -82,6 +92,15 @@ build_driver()
 			#git clone git://anongit.freedesktop.org/vaapi/libva
     	fi
     fi
+    cd ${CURRENT_PATH}/libva
+    echo  -e "\n---build ${CURRENT_PATH}/libva---\n"
+    git clean -dxf && ./autogen.sh --prefix=$VAAPI_PREFIX && make -j8 &&  make install
+    if [ $? -ne 0 ];then
+        echo -e "build ${CURRENT_PATH}/libva  \t fail"
+    else
+        echo "build ${CURRENT_PATH}/libva ok"
+    fi
+    cd ..
 
     if [ -d "libva—utils" ];then
        	cd libva-utils
@@ -99,13 +118,23 @@ build_driver()
     		git reset ${LIBVA_UTILS_TAG} --hard
     		git clean -dxf
     	else
-			git clone --single-branch https://github.com/01org/libva-utils.git
+		git clone --single-branch https://github.com/01org/libva-utils.git
     	fi
+    fi
+
+    #Install libva-utils
+    cd ${CURRENT_PATH}/libva-utils
+    echo -e "\n---build ${CURRENT_PATH}/libva-utils---\n"
+    git clean -dxf
+    ./autogen.sh --prefix="/opt/" && make && make install
+    if [ $? -ne 0 ]; then
+    	echo -e "build ${CURRENT_PATH}/libva-utils   \t fail"
+    else
+    	echo "build ${CURRENT_PATH}/libva—utils ok"
     fi
 
     if [ -d "intel-vaapi-driver" ];then
     	cd intel-vaapi-driver
-    	make uninstall
     	if [[ ${INTEL_VAAPI_DRIVER_TAG} ]]; then
     		git reset ${INTEL_VAAPI_DRIVER_TAG} --hard
     	else
@@ -123,28 +152,6 @@ build_driver()
     		#git clone git://anongit.freedesktop.org/vaapi/intel-driver
     	fi
     fi
-
-    cd ${CURRENT_PATH}/libva
-    echo  -e "\n---build ${CURRENT_PATH}/libva---\n"
-    git clean -dxf && ./autogen.sh --subdir-objects --prefix=$VAAPI_PREFIX --enable-wayland && make -j8 &&  make install
-    if [ $? -ne 0 ];then
-        echo -e "build ${CURRENT_PATH}/libva  \t fail"
-    else
-        echo "build ${CURRENT_PATH}/libva ok"
-    fi
-
-
-    #Install libva-utils
-    cd ${CURRENT_PATH}/libva—utils
-    echo -e "\n---build ${CURRENT_PATH}/libva-utils---\n"
-    git clean -dxf
-    #make install
-    if [ $? -ne 0 ]; then
-    	echo -e "build ${CURRENT_PATH}/libva-utils   \t fail"
-    else
-    	echo "build ${CURRENT_PATH}/libva—utils ok"
-    fi
-
 
     cd ${CURRENT_PATH}/intel-vaapi-driver
     echo  -e "\n---build ${CURRENT_PATH}/intel-driver---\n"
@@ -551,7 +558,7 @@ update()
 }
 
 setenv
-if [-z ${UPDATE_FLAG}]; then
+if [[-z ${UPDATE_FLAG}]]; then
 	update
 else
 	build_driver
