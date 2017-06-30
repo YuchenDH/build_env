@@ -126,7 +126,7 @@ build_driver()
     cd ${CURRENT_PATH}/libva-utils
     echo -e "\n---build ${CURRENT_PATH}/libva-utils---\n"
     git clean -dxf
-    ./autogen.sh --prefix="/opt/" && make && make install
+    ./autogen.sh --prefix="/opt/" && ./configure && make && make install
     if [ $? -ne 0 ]; then
     	echo -e "build ${CURRENT_PATH}/libva-utils   \t fail"
     else
@@ -561,7 +561,8 @@ setenv
 if [[-z ${UPDATE_FLAG}]]; then
 	update
 else
-	build_driver
+#	build_driver
+	echo
 fi
 #build_release_driver
 #build_cmrt_hybrid_driver
