@@ -3,9 +3,7 @@ set -e
 set -x
 
 #This is current installing path
-export workpath="/opt/X11R7"
-
-rm -rf $workpath
+export workpath="/opt"
 
 if [[ -d ${workpath} ]]; then
 	cd ${workpath}
@@ -20,20 +18,11 @@ DAY=`date +"%Y-%m-%d-%H-%M"`
 
 init()
 {
-apt-get install autoconf make libtool libdrm2 libdrm-intel1 libdrm-radeon1 libdrm-nouveau2
+apt-get install autoconf make libtool libdrm2 libdrm-intel1 libdrm-radeon1 libdrm-nouveau2 libdrm-dev
 }
 
 
-#install libxml2
-#apt-get install libexpat1-dev
-#git clone --single-branch https://github.com/wayland-project/wayland.git
-#cd ${CURRENT_PATH}/wayland/
-#./autogen
-#cd ..
-
-
-
-#All components are installed under /opt/X11R7/
+#All components are installed under /opt/
 setenv()
 {
 export YAMI_ROOT_DIR="${CURRENT_PATH}/yami"
