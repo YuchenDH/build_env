@@ -88,14 +88,14 @@ make
 sudo make install
 cd ..
 
-cd gst-libav
+#cd gst-libav
 #git checkout -t origin/$BRANCH || true
 #sudo make uninstall || true
 #git pull
-./autogen.sh --disable-gtk-doc
-make
-sudo make install
-cd ..
+#./autogen.sh --disable-gtk-doc
+#make
+#sudo make install
+#cd ..
 
 cd gst-plugins-bad
 #git checkout -t origin/$BRANCH || true
