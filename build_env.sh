@@ -101,7 +101,7 @@ build_libva()
     fi
     cd ..
 
-    if [ -d "libva—utils" ];then
+    if [ -d "libva-utils" ];then
        	cd libva-utils
        	#make uninstall
        	if [[ ${LIBVA_UTILS_TAG} ]]; then
@@ -129,8 +129,13 @@ build_libva()
     if [ $? -ne 0 ]; then
     	echo -e "Failed when building ${CURRENT_PATH}/libva-utils"
     else
-    	echo "building completed"
+    	echo "Building completed"
+	if [ -z $LIBVA_UTILS_TAG ];then
+		echo "built at tag $LIBVA_UTILS_TAG"
+	fi
     fi
+    cd ..
+
 
     if [ -d "intel-vaapi-driver" ];then
     	cd intel-vaapi-driver
