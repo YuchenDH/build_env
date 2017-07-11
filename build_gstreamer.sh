@@ -1,11 +1,53 @@
+#!/bin/sh
 set -x
+#set -x
 
 BRANCH="master"
 
 [ -n "$1" ] && BRANCH=$1
 
 HOME="/opt"
+SRC_PATH="$HOME/src/gstreamer"
 
+export GSTREAMER_INSTALL_PATH="/opt/X11R7/gstreamer10"
+
+GST_PREFIX="${GSTREAMER_INSTALL_PATH}/"
+GST_OPTION="--enable-gtk-doc=no"
+GST_BASE_PREFIX="${GSTREAMER_INSTALL_PATH}/"
+GST_BASE_OPTION="--enable-gtk-doc=no"
+GST_GOOD_PREFIX="${GSTREAMER_INSTALL_PATH}/"
+GST_GOOD_OPTION="--enable-gtk-doc=no"
+GST_UGLY_PREFIX="${GSTREAMER_INSTALL_PATH}/"
+GST_UGLY_OPTION="--enable-x264 --enable-gtk-doc=no"
+GST_BAD_PREFIX="${GSTREAMER_INSTALL_PATH}/"
+GST_BAD_OPTION="--disable-eglgles --disable-bluez --enable-gtk-doc=no"
+GST_VAAPI_PREFIX="${GSTREAMER_INSTALL_PATH}/"
+GST_VAAPI_OPTION="--disable-glx --enable-encoders --enable-gtk-doc=no"
+
+export PATH=${GSTREAMER_INSTALL_PATH}/bin:$PATH
+export LD_LIBRARY_PATH=/opt/X11R7/glib/lib:/opt/X11R7/x264/lib:/opt/X11R7/ffmpeg/lib:${GSTREAMER_INSTALL_PATH}/lib:$LD_LIBRARY_PATH
+export PKG_CONFIG_PATH=${GSTREAMER_INSTALL_PATH}/lib/pkgconfig:$PKG_CONFIG_PATH
+export GST_PLUGIN_PATH=${GSTREAMER_INSTALL_PATH}/lib/gstreamer-1.0
+
+gst_envinfo(){
+echo "====================Current Gst Config============================="
+echo "GST_PREFIX		${GST_PREFIX}"
+echo "GST_BASE_PREFIX		${GST_BASE_PREFIX}"
+echo "GST_GOOD_PREFIX		${GST_GOOD_PREFIX}"
+echo "GST_UGLY_PREFIX		${GST_UGLY_PREFIX}"
+echo "GST_BAD_PREFIX		${GST_BAD_PREFIX}"
+echo "GST_VAAPI_PREFIX		${GST_VAAPI_PREFIX}"
+echo "==================================================================="
+echo "gstreamer: git clean -ixf && ./autogen.sh --prefix=${GST_PREFIX} ${GST_OPTION} && make -j32 && make install"
+echo "gst_base: git clean -ixf && ./autogen.sh --prefix=${GST_BASE_PREFIX} ${GST_BASE_OPTION} && make -j32 && make install"
+echo "gst_good: git clean -ixf && ./autogen.sh --prefix=${GST_GOOD_PREFIX} ${GST_GOOD_OPTION} && make -j32 && make install"
+echo "gst_ugly: git clean -ixf && ./autogen.sh --prefix=${GST_UGLY_PREFIX} ${GST_UGLY_OPTION} && make -j32 && make install"
+echo "gst_bad: git clean -ixf && ./autogen.sh --prefix=${GST_BAD_PREFIX} ${GST_BAD_OPTION} && make -j8 && make install"
+echo "gst_vaapi: git clean -ixf && ./autogen.sh --prefix=${GST_VAAPI} ${GST_VAAPI_OPTION} && make -j8 && make install"
+echo "Source files are stored in ${SRC_PATH}"
+}
+
+init_gst(){
 # Update and Upgrade the Pi, otherwise the build may fail due to inconsistencies
 grep -q BCM2708 /proc/cpuinfo && sudo apt-get update && sudo apt-get upgrade -y --force-yes
 
@@ -31,13 +73,11 @@ sudo apt-get install -y --force-yes build-essential autotools-dev automake autoc
                                     libmpeg2-4-dev libopencore-amrnb-dev libopencore-amrwb-dev \
                                     libsidplay1-dev libtwolame-dev libx264-dev libusb-1.0 \
                                     python-gi-dev yasm python3-dev libgirepository1.0-dev
+}
 
-# get the repos if they're not already there
 cd $HOME
-[ ! -d src ] && mkdir src
-cd src
-[ ! -d gstreamer ] && mkdir gstreamer
-cd gstreamer
+[ ! -d $SRC_PATH ] && mkdir $SRC_PATH
+cd $SRC_PATH
 
 # get repos if they are not there yet
 #[ ! -d gstreamer ] && git clone git://anongit.freedesktop.org/git/gstreamer/gstreamer
@@ -50,59 +90,86 @@ cd gstreamer
 #[ ! -d gst-python ] && git clone git://anongit.freedesktop.org/git/gstreamer/gst-python
 #[ ! $RPI ] && [ ! -d gstreamer-vaapi ] && git clone git://gitorious.org/vaapi/gstreamer-vaapi.git
 
-export LD_LIBRARY_PATH=/usr/local/lib/
-# checkout branch (default=master) and build & install
-cd gstreamer
-#git checkout -t origin/$BRANCH || true
-#sudo make uninstall || true
-#git pull
-./autogen.sh --disable-gtk-doc
-make
-sudo make install
-cd ..
+# checkout branch (default=master) and build and install
 
+build_gst(){
+echo "============Building gstreamer============"
+echo "Changing into $SRC_PATH/gstreamer/"
+cd gstreamer
+#git pull && git clean -ixf
+./autogen.sh --prefix=${GST_PREFIX} ${GST_OPTION} && make -j32 && make install
+if [ $? -ne 0 ]; then
+	echo "Failed when building gstreamer!"
+	exit -1
+fi
+echo "============Build Completed==============="
+cd ..
+}
+
+build_gst_base(){
+echo "========Building gst-plugins-base========="
+echo "Moving into $SRC_PATH/gst-plugins-base/"
 cd gst-plugins-base
 #git checkout -t origin/$BRANCH || true
 #sudo make uninstall || true
-#git pull
-./autogen.sh --disable-gtk-doc
-make
-sudo make install
+#git pull && git clean -ixf
+./autogen.sh --prefix=${GST_BASE_PREFIX} ${GST_BASE_OPTION} && make -j32 && make install
+if [ $? -ne 0 ]; then
+        echo "Failed when building gst-plugins-base!"
+        exit -1
+fi
+echo "=============BUild Completed=============="
 cd ..
+}
 
+build_gst_good(){
+echo "=========Building gst-plugins-good========"
+echo "Moving into $SRC_PATH/gst-plugins-good/"
 cd gst-plugins-good
 #git checkout -t origin/$BRANCH || true
 #sudo make uninstall || true
-#git pull
-./autogen.sh --disable-gtk-doc
-make
-sudo make install
+#git pull && git clean -ixf
+./autogen.sh --prefix=${GST_GOOD_PREFIX} ${GST_GOOD_OPTION} && make -j32 && make install
+if [ $? -ne 0 ]; then
+        echo "Failed when building gst-plugins-good!"
+        exit -1
+fi
+echo "=============Build Compelted=============="
 cd ..
+}
 
+build_gst_ugly(){
+echo "=========Building gst-plugins-ugly========"
+echo "Moving into $SRC_PATH/gst-plugins-ugly/"
 cd gst-plugins-ugly
 #git checkout -t origin/$BRANCH || true
 #sudo make uninstall || true
-#git pull
-./autogen.sh --disable-gtk-doc
-make
-sudo make install
+#git pull && git clean -ixf
+./autogen.sh --prefix=${GST_UGLY_PREFIX} ${GST_UGLY_OPTION} && make -j32 && make install
+if [ $? -ne 0 ]; then
+        echo "Failed when building gst-plugins-ugly!"
+        exit -1
+fi
+echo "=============Build Compelted=============="
 cd ..
+}
 
-#cd gst-libav
-#git checkout -t origin/$BRANCH || true
-#sudo make uninstall || true
-#git pull
-#./autogen.sh --disable-gtk-doc
-#make
-#sudo make install
-#cd ..
-
+build_gst_bad(){
+echo "=========Building gst-plugins-bad========="
+echo "Moving into $SRC_PATH/gst-plugins-bad/"
 cd gst-plugins-bad
 #git checkout -t origin/$BRANCH || true
 #sudo make uninstall || true
-#git pull
+#git pull && git clean -ixf 
+./autogen.sh --prefix=${GST_BAD_PREFIX} ${GST_BAD_OPTION} && make -j8 && make install
+make && make install
+if [ $? -ne 0 ]; then
+        echo "Failed when building gst-plugins-bad!"
+        exit -1
+fi
+echo "=============Build Compelted=============="
 cd ..
-
+}
 
 # python bindings
 #cd gst-python
@@ -111,16 +178,30 @@ cd ..
 #sudo make uninstall || true
 #git pull
 #PYTHON=/usr/bin/python3 ./autogen.sh
-#make
+#make -j32
 #sudo make install
 #cd ..
 
-
+build_gst_vaapi(){
+echo "============Building gst-vaapi==========="
+echo "Moving into $SRC_PATH/gstreamer-vaapi/"
 cd gstreamer-vaapi
 #sudo make uninstall || true
-#git pull
-./autogen.sh
-make
-sudo make install
+#git pull && git clean -ixf
+./autogen.sh --prefix=${GST_VAAPI} ${GST_VAAPI_OPTION} && make -j8 && make install
+if [ $? -ne 0 ]; then
+        echo "Failed when building gst-vaapi!"
+        exit -1
+fi
+echo "=============Build Compelted============="
 cd ..
+}
 
+#init_gst
+#gst_envinfo
+#build_gst
+#build_gst_base
+#build_gst_good
+#build_gst_ugly
+build_gst_bad
+build_gst_vaapi

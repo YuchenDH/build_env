@@ -37,7 +37,7 @@ apt-get install libx11-dev libv4l-dev libegl-mesa-dev libglu1-mesa-dev mesa-comm
 setenv()
 {
 export YAMI_ROOT_DIR="${CURRENT_PATH}/yami"
-export VAAPI_PREFIX="${YAMI_ROOT_DIR}/vaapi"
+export VAAPI_PREFIX="${CURRENT_PATH}/vaapi"
 export LIBYAMI_PREFIX="${YAMI_ROOT_DIR}/libyami"
 ADD_PKG_CONFIG_PATH="${VAAPI_PREFIX}/lib/pkgconfig/:${LIBYAMI_PREFIX}/lib/pkgconfig/"
 ADD_LD_LIBRARY_PATH="${VAAPI_PREFIX}/lib/:${LIBYAMI_PREFIX}/lib/"
@@ -64,12 +64,11 @@ echo "* PATH:                       $PATH"
 echo "*========================================================================="
 
 echo "* vaapi:      git clean -dxf && ./autogen.sh --prefix=\$VAAPI_PREFIX && make -j8 && make install"
-echo "* ffmpeg:     git clean -dxf && ./configure --prefix=\$VAAPI_PREFIX && make -j8 && make install"
 echo "* libyami:    git clean -dxf && ./autogen.sh --prefix=\$LIBYAMI_PREFIX --enable-tests --enable-tests-gles && make -j8 && make install"
 }
 
 
-build_driver()
+build_libva()
 {   
     cd ${CURRENT_PATH}/
     if [[ -d "libva" ]];then
@@ -124,13 +123,13 @@ build_driver()
 
     #Install libva-utils
     cd ${CURRENT_PATH}/libva-utils
-    echo -e "\n---build ${CURRENT_PATH}/libva-utils---\n"
+    echo -e "\n---Building ${CURRENT_PATH}/libva-utils---\n"
     git clean -dxf
-    ./autogen.sh --prefix="/opt/" && ./configure && make && make install
+    ./autogen.sh --prefix=${VAAPI_PREFIX} && ./configure && make && make install
     if [ $? -ne 0 ]; then
-    	echo -e "build ${CURRENT_PATH}/libva-utils   \t fail"
+    	echo -e "Failed when building ${CURRENT_PATH}/libva-utils"
     else
-    	echo "build ${CURRENT_PATH}/libva—utils ok"
+    	echo "building completed"
     fi
 
     if [ -d "intel-vaapi-driver" ];then
@@ -252,7 +251,7 @@ build_ffmpeg()
 
 build_libyami_internal()
 {
-	cd ${CURRENT_PATH}
+	cd $CURRENT_PATH
        	if [ -d libyami ]; then
 			cd libyami
 		else
@@ -272,13 +271,13 @@ build_libyami_internal()
         fi
 
         if [ $? -ne 0 ];then
-        	echo -e "build ${CURRENT_PATH}/libyami  \t fail" >> ${RESULT_LOG_FILE}
+        	echo -e "Failed when building ${CURRENT_PATH}/libyami" >> ${RESULT_LOG_FILE}
         else
-        	echo "build ${CURRENT_PATH}/libyami ok"
+        	echo "Building ${CURRENT_PATH}/libyami completed"
         fi
 
         if [[ ${LIBYAMI_TAG} ]]; then
-        	echo "built at tag ${LIBYAMI_TAG}"
+        	echo "Built at tag ${LIBYAMI_TAG}"
         fi
 
 
@@ -310,13 +309,13 @@ build_libyami_utils()
 
 
         if [ $? -ne 0 ];then
-            echo -e "build ${CURRENT_PATH}/libyami-utils  \t fail" >> ${RESULT_LOG_FILE}
+            echo -e "Failed when building ${CURRENT_PATH}/libyami-utils" >> ${RESULT_LOG_FILE}
         else
-            echo "build ${CURRENT_PATH}/libyami-utils ok"
+            echo "Building ${CURRENT_PATH}/libyami-utils completed"
         fi
 
         if [[ ${LIBYAMI_UTILS_TAG} ]]; then
-        	echo "built at tag ${LIBYAMI_UTILS_TAG}"
+        	echo "Built at tag ${LIBYAMI_UTILS_TAG}"
         fi
 }
 
@@ -459,6 +458,7 @@ do
 			done
 		fi
 			;;
+
 		-i|--initialize )
 		shift
 		echo "Initializing basic environment for new machine..."
@@ -561,10 +561,10 @@ setenv
 if [[-z ${UPDATE_FLAG}]]; then
 	update
 else
-	build_driver
+	build_libva
 	echo
 fi
-#build_release_driver
+
 #build_cmrt_hybrid_driver
 #build_ffmpeg
 build_libyami_internal
