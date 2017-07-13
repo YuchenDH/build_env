@@ -22,6 +22,7 @@ echo "Installing basic system requirement..."
 apt-get install g++ autoconf make libtool libdrm2 libdrm-intel1 libdrm-radeon1 libdrm-nouveau2 libdrm-dev texinfo 
 #apt-get install libexpat-dev libxml2-dev
 apt-get install libx11-dev libv4l-dev libegl-mesa-dev libglu1-mesa-dev mesa-common-dev libgles2-mesa-dev libbsd-dev libav-tools
+apt-get install libavcodec-dev libavformat-dev libswscale-dev libavutil-dev
 #echo "Installing libffi as a part of wayland"
 #git clone git://github.com/atgreen/libffi.git --single-branch
 #cd libffi-3.1 && ./configure && make && make install && cd ..
@@ -34,34 +35,46 @@ apt-get install libx11-dev libv4l-dev libegl-mesa-dev libglu1-mesa-dev mesa-comm
 
 
 #All components are installed under /opt/
+sourcing()
+{
+	export YAMI_ROOT_DIR="${CURRENT_PATH}/yami"
+	export VAAPI_ROOT_DIR="${CURRENT_PATH}"
+	export VAAPI_PREFIX="${CURRENT_PATH}/vaapi"
+	export LIBYAMI_PREFIX="${YAMI_ROOT_DIR}/libyami"
+	ADD_PKG_CONFIG_PATH="${VAAPI_PREFIX}/lib/pkgconfig/:${LIBYAMI_PREFIX}/lib/pkgconfig/"
+	ADD_LD_LIBRARY_PATH="${VAAPI_PREFIX}/lib/:${LIBYAMI_PREFIX}/lib/"
+	ADD_PATH="${VAAPI_PREFIX}/bin/:${LIBYAMI_PREFIX}/bin/"
+
+	PLATFORM_ARCH_64=`uname -a | grep x86_64`
+	if [ -n "$PKG_CONFIG_PATH" ]; then
+    		export PKG_CONFIG_PATH="${ADD_PKG_CONFIG_PATH}:$PKG_CONFIG_PATH"
+	elif [ -n "$PLATFORM_ARCH_64" ]; then
+    		export PKG_CONFIG_PATH="${ADD_PKG_CONFIG_PATH}:/usr/lib/pkgconfig/:/usr/lib/i386-linux-gnu/pkgconfig/"
+	else
+    		export PKG_CONFIG_PATH="${ADD_PKG_CONFIG_PATH}:/usr/lib/pkgconfig/:/usr/lib/x86_64-linux-gnu/pkgconfig/"
+	fi
+
+	export LD_LIBRARY_PATH="${ADD_LD_LIBRARY_PATH}:$LD_LIBRARY_PATH"
+
+	export PATH="${ADD_PATH}:$PATH"
+
+	echo "*=======================current configuration============================="
+	echo "* VAAPI_PREFIX:               $VAAPI_PREFIX"
+	echo "* LIBYAMI_PREFIX:             ${LIBYAMI_PREFIX}"
+	echo "* LD_LIBRARY_PATH:            ${LD_LIBRARY_PATH}"
+	echo "* PATH:                       $PATH"
+	echo "*========================================================================="
+	if [ -d yami.env];then
+		echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH" > yami.env
+		echo "PKG_CONTROL_PATH=$PKG_CONFIG_PATH" >> yami.env
+		echo "PATH=$PATH" >> yami.env
+		echo "export LD_LIBRARY_PATH PKG_CONFIG_PATH PATH">> yami.env
+	fi
+}
+
 setenv()
 {
-export YAMI_ROOT_DIR="${CURRENT_PATH}/yami"
-export VAAPI_PREFIX="${CURRENT_PATH}/vaapi"
-export LIBYAMI_PREFIX="${YAMI_ROOT_DIR}/libyami"
-ADD_PKG_CONFIG_PATH="${VAAPI_PREFIX}/lib/pkgconfig/:${LIBYAMI_PREFIX}/lib/pkgconfig/"
-ADD_LD_LIBRARY_PATH="${VAAPI_PREFIX}/lib/:${LIBYAMI_PREFIX}/lib/"
-ADD_PATH="${VAAPI_PREFIX}/bin"
-
-PLATFORM_ARCH_64=`uname -a | grep x86_64`
-if [ -n "$PKG_CONFIG_PATH" ]; then
-    export PKG_CONFIG_PATH="${ADD_PKG_CONFIG_PATH}:$PKG_CONFIG_PATH"
-elif [ -n "$PLATFORM_ARCH_64" ]; then
-    export PKG_CONFIG_PATH="${ADD_PKG_CONFIG_PATH}:/usr/lib/pkgconfig/:/usr/lib/i386-linux-gnu/pkgconfig/"
-else 
-    export PKG_CONFIG_PATH="${ADD_PKG_CONFIG_PATH}:/usr/lib/pkgconfig/:/usr/lib/x86_64-linux-gnu/pkgconfig/"
-fi
-
-export LD_LIBRARY_PATH="${ADD_LD_LIBRARY_PATH}:$LD_LIBRARY_PATH"
-
-export PATH="${ADD_PATH}:$PATH"
-
-echo "*=======================current configuration============================="
-echo "* VAAPI_PREFIX:               $VAAPI_PREFIX"
-echo "* LIBYAMI_PREFIX:             ${LIBYAMI_PREFIX}"
-echo "* LD_LIBRARY_PATH:            ${LD_LIBRARY_PATH}"
-echo "* PATH:                       $PATH"
-echo "*========================================================================="
+sourcing
 
 echo "* vaapi:      git clean -dxf && ./autogen.sh --prefix=\$VAAPI_PREFIX && make -j8 && make install"
 echo "* libyami:    git clean -dxf && ./autogen.sh --prefix=\$LIBYAMI_PREFIX --enable-tests --enable-tests-gles && make -j8 && make install"
@@ -442,7 +455,14 @@ do
 			done
 		fi
 			;;
-
+		
+		-s|--source )
+		shift
+		echo "Sourcing..."
+		sourcing
+		exit 0
+			;;
+		
 		-i|--initialize )
 		shift
 		echo "Initializing basic environment for new machine..."
@@ -542,6 +562,7 @@ update()
 }
 
 setenv
+
 if [[-z ${UPDATE_FLAG}]]; then
 	update
 else
@@ -550,7 +571,7 @@ else
 fi
 
 #build_cmrt_hybrid_driver
-build_ffmpeg
+#build_ffmpeg
 #build_libyami_internal
 build_libyami_utils
 show_details
