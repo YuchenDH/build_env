@@ -6,8 +6,8 @@ BRANCH="master"
 
 [ -n "$1" ] && BRANCH=$1
 
-HOME="/opt"
-SRC_PATH="$HOME/src/gstreamer"
+workpath="/opt"
+GST_SRC_PATH="$workpath/src/gstreamer"
 
 export GSTREAMER_INSTALL_PATH="/opt/X11R7/gstreamer10"
 
@@ -30,21 +30,21 @@ export PKG_CONFIG_PATH=${GSTREAMER_INSTALL_PATH}/lib/pkgconfig:$PKG_CONFIG_PATH
 export GST_PLUGIN_PATH=${GSTREAMER_INSTALL_PATH}/lib/gstreamer-1.0
 
 gst_envinfo(){
-echo "====================Current Gst Config============================="
-echo "GST_PREFIX		${GST_PREFIX}"
+echo "====================Current gstreamer Config============================="
+echo "GST_PREFIX		    ${GST_PREFIX}"
 echo "GST_BASE_PREFIX		${GST_BASE_PREFIX}"
 echo "GST_GOOD_PREFIX		${GST_GOOD_PREFIX}"
 echo "GST_UGLY_PREFIX		${GST_UGLY_PREFIX}"
 echo "GST_BAD_PREFIX		${GST_BAD_PREFIX}"
 echo "GST_VAAPI_PREFIX		${GST_VAAPI_PREFIX}"
-echo "==================================================================="
-echo "gstreamer: git clean -ixf && ./autogen.sh --prefix=${GST_PREFIX} ${GST_OPTION} && make -j32 && make install"
-echo "gst_base: git clean -ixf && ./autogen.sh --prefix=${GST_BASE_PREFIX} ${GST_BASE_OPTION} && make -j32 && make install"
-echo "gst_good: git clean -ixf && ./autogen.sh --prefix=${GST_GOOD_PREFIX} ${GST_GOOD_OPTION} && make -j32 && make install"
-echo "gst_ugly: git clean -ixf && ./autogen.sh --prefix=${GST_UGLY_PREFIX} ${GST_UGLY_OPTION} && make -j32 && make install"
-echo "gst_bad: git clean -ixf && ./autogen.sh --prefix=${GST_BAD_PREFIX} ${GST_BAD_OPTION} && make -j8 && make install"
-echo "gst_vaapi: git clean -ixf && ./autogen.sh --prefix=${GST_VAAPI} ${GST_VAAPI_OPTION} && make -j8 && make install"
-echo "Source files are stored in ${SRC_PATH}"
+echo "========================================================================="
+echo "gstreamer: git clean -dxf && ./autogen.sh --prefix=${GST_PREFIX} ${GST_OPTION} && make -j32 && make install"
+echo "gst_base: git clean -dxf && ./autogen.sh --prefix=${GST_BASE_PREFIX} ${GST_BASE_OPTION} && make -j32 && make install"
+echo "gst_good: git clean -dxf && ./autogen.sh --prefix=${GST_GOOD_PREFIX} ${GST_GOOD_OPTION} && make -j32 && make install"
+echo "gst_ugly: git clean -dxf && ./autogen.sh --prefix=${GST_UGLY_PREFIX} ${GST_UGLY_OPTION} && make -j32 && make install"
+echo "gst_bad: git clean -dxf && ./autogen.sh --prefix=${GST_BAD_PREFIX} ${GST_BAD_OPTION} && make -j8 && make install"
+echo "gst_vaapi: git clean -dxf && ./autogen.sh --prefix=${GST_VAAPI} ${GST_VAAPI_OPTION} && make -j8 && make install"
+echo "Source files are stored in ${GST_SRC_PATH}"
 }
 
 init_gst(){
@@ -75,9 +75,9 @@ sudo apt-get install -y --force-yes build-essential autotools-dev automake autoc
                                     python-gi-dev yasm python3-dev libgirepository1.0-dev
 }
 
-cd $HOME
-[ ! -d $SRC_PATH ] && mkdir $SRC_PATH
-cd $SRC_PATH
+cd $workpath
+[ ! -d ${GST_SRC_PATH} ] && mkdir ${GST_SRC_PATH}
+cd ${GST_SRC_PATH}
 
 # get repos if they are not there yet
 #[ ! -d gstreamer ] && git clone git://anongit.freedesktop.org/git/gstreamer/gstreamer
@@ -94,9 +94,9 @@ cd $SRC_PATH
 
 build_gst(){
 echo "============Building gstreamer============"
-echo "Changing into $SRC_PATH/gstreamer/"
+echo "Changing into ${GST_SRC_PATH}/gstreamer/"
 cd gstreamer
-#git pull && git clean -ixf
+#git pull && git clean -dxf
 ./autogen.sh --prefix=${GST_PREFIX} ${GST_OPTION} && make -j32 && make install
 if [ $? -ne 0 ]; then
 	echo "Failed when building gstreamer!"
@@ -108,11 +108,11 @@ cd ..
 
 build_gst_base(){
 echo "========Building gst-plugins-base========="
-echo "Moving into $SRC_PATH/gst-plugins-base/"
+echo "Moving into ${GST_SRC_PATH}/gst-plugins-base/"
 cd gst-plugins-base
 #git checkout -t origin/$BRANCH || true
 #sudo make uninstall || true
-#git pull && git clean -ixf
+#git pull && git clean -dxf
 ./autogen.sh --prefix=${GST_BASE_PREFIX} ${GST_BASE_OPTION} && make -j32 && make install
 if [ $? -ne 0 ]; then
         echo "Failed when building gst-plugins-base!"
@@ -124,11 +124,11 @@ cd ..
 
 build_gst_good(){
 echo "=========Building gst-plugins-good========"
-echo "Moving into $SRC_PATH/gst-plugins-good/"
+echo "Moving into ${GST_SRC_PATH}/gst-plugins-good/"
 cd gst-plugins-good
 #git checkout -t origin/$BRANCH || true
 #sudo make uninstall || true
-#git pull && git clean -ixf
+#git pull && git clean -dxf
 ./autogen.sh --prefix=${GST_GOOD_PREFIX} ${GST_GOOD_OPTION} && make -j32 && make install
 if [ $? -ne 0 ]; then
         echo "Failed when building gst-plugins-good!"
@@ -140,11 +140,11 @@ cd ..
 
 build_gst_ugly(){
 echo "=========Building gst-plugins-ugly========"
-echo "Moving into $SRC_PATH/gst-plugins-ugly/"
+echo "Moving into ${GST_SRC_PATH}/gst-plugins-ugly/"
 cd gst-plugins-ugly
 #git checkout -t origin/$BRANCH || true
 #sudo make uninstall || true
-#git pull && git clean -ixf
+#git pull && git clean -dxf
 ./autogen.sh --prefix=${GST_UGLY_PREFIX} ${GST_UGLY_OPTION} && make -j32 && make install
 if [ $? -ne 0 ]; then
         echo "Failed when building gst-plugins-ugly!"
@@ -156,11 +156,11 @@ cd ..
 
 build_gst_bad(){
 echo "=========Building gst-plugins-bad========="
-echo "Moving into $SRC_PATH/gst-plugins-bad/"
+echo "Moving into ${GST_SRC_PATH}/gst-plugins-bad/"
 cd gst-plugins-bad
-#git checkout -t origin/$BRANCH || true
-#sudo make uninstall || true
-#git pull && git clean -ixf 
+if [[ ${GST_VAAPI_TAG} ]]; then
+    git reset ${GST_VAAPI_TAG} --hard
+fi
 ./autogen.sh --prefix=${GST_BAD_PREFIX} ${GST_BAD_OPTION} && make -j8 && make install
 make && make install
 if [ $? -ne 0 ]; then
@@ -171,23 +171,12 @@ echo "=============Build Compelted=============="
 cd ..
 }
 
-# python bindings
-#cd gst-python
-#git checkout -t origin/$BRANCH || true
-#export LD_LIBRARY_PATH=/usr/local/lib/
-#sudo make uninstall || true
-#git pull
-#PYTHON=/usr/bin/python3 ./autogen.sh
-#make -j32
-#sudo make install
-#cd ..
-
 build_gst_vaapi(){
 echo "============Building gst-vaapi==========="
-echo "Moving into $SRC_PATH/gstreamer-vaapi/"
+echo "Moving into ${GST_SRC_PATH}/gstreamer-vaapi/"
 cd gstreamer-vaapi
 #sudo make uninstall || true
-#git pull && git clean -ixf
+#git pull && git clean -dxf
 ./autogen.sh --prefix=${GST_VAAPI} ${GST_VAAPI_OPTION} && make -j8 && make install
 if [ $? -ne 0 ]; then
         echo "Failed when building gst-vaapi!"
@@ -197,11 +186,15 @@ echo "=============Build Compelted============="
 cd ..
 }
 
+build_gst_all(){
+    build_gst
+    build_gst_base
+    build_gst_good
+    build_gst_ugly
+    build_gst_bad
+    build_gst_vaapi
+}
+
 #init_gst
 #gst_envinfo
-#build_gst
-#build_gst_base
-#build_gst_good
-#build_gst_ugly
-build_gst_bad
-build_gst_vaapi
+
