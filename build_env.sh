@@ -3,7 +3,7 @@
 set -x
 
 #This is current installing path
-export workpath="/opt"
+export workpath="/opt/test"
 
 if [[ -d ${workpath} ]]; then
 	cd ${workpath}
@@ -202,7 +202,7 @@ build_libva()
        	git pull && git clean -dxf
        	cd ..
     else
-		git clone --single-branch https://github.com/01org/libva.git
+	git clone --single-branch https://github.com/01org/libva.git
     fi
 
     cd ${CURRENT_PATH}/libva
@@ -274,17 +274,17 @@ build_libva()
 
 build_libyami_internal()
 {
-	cd $CURRENT_PATH
+    cd $CURRENT_PATH
     if [[ -d libyami ]]; then
-		cd libyami
-	else
-       	git clone https://github.com/01org/libyami.git --single-branch
+        cd libyami
+    else
+        git clone https://github.com/01org/libyami.git --single-branch
        	cd libyami
     fi
-	
-	echo  -e "\n---build ${CURRENT_PATH}/libyami---\n"
 
-	[[ ${LIBYAMI_TAG} ]] && git reset ${LIBYAMI_TAG} --hard
+    echo  -e "\n---build ${CURRENT_PATH}/libyami---\n"
+
+    [[ ${LIBYAMI_TAG} ]] && git reset ${LIBYAMI_TAG} --hard
 
     git clean -dxf && ./autogen.sh --prefix=$LIBYAMI_PREFIX $LIBYAMI_OPTION && make -j8 && make install
 
@@ -452,17 +452,17 @@ do
 	case $1 in
 		--enable-gstreamer|--enable-gst )
 		shift
-		$ENABLE_GST=true
+		ENABLE_GST=true
 			;;
 
 		--disable-vaapi )
 		shift
-		$ENABLE_VAAPI=false
+		ENABLE_VAAPI=false
 			;;
 
 		--disable-yami )
 		shift
-		$ENABLE_YAMI=false
+		ENABLE_YAMI=false
 			;;
 
 		-v|--version )
@@ -518,7 +518,7 @@ do
 		if [[ $#=1 ]]; then
 			read -r -p "Update all components? [Y/n]" reply
 			[[ "$reply" =~ ^[Yy]$ ]] && UPDATE_FLAG=0 || echo "Please re-type your command." && exit 1
-		fi
+		
 
 		else
 			while [ $# -gt 1]
@@ -574,7 +574,7 @@ do
 		
 		-i|--initialize )
 		shift
-		$INIT_FLAG=true
+		INIT_FLAG=true
 			;;
 
 		--status )
@@ -695,33 +695,34 @@ update()
 		else
 			git pull && git clean -dxf && ./autogen.sh --prefix=${GST_VAAPI} ${GST_VAAPI_OPTION} && make -j8 && make install
 			if [ $? -ne 0 ]; then
-        		echo "Failed when building gst-vaapi!"
-        		exit -1
+        		    echo "Failed when building gst-vaapi!"
+        		    exit -1
 			fi
 			echo -e "\nupdate ${CURRENT_PATH}/libva—utils completed"
 		fi
+		;;
 
 		*)
-		echo -e "Error: Unknown update component!"
-			exit -1
-			;;
+		    echo -e "Error: Unknown update component!"
+		    exit -1
+		;;
 	esac
 }
 
 setenv
 
-if [[ $INIT_FLAG==true ]]; then
-	[[ $ENABLE_GST==true ]] && init_gst
+if [[ $INIT_FLAG == true ]]; then
+	[[ $ENABLE_GST == true ]] && init_gst
 	init
 fi
 
 [[ -n ${UPDATE_FLAG} ]] && update
 
-[[ ${ENABLE_VAAPI}==true ]] && build_libva
+[[ ${ENABLE_VAAPI} == true ]] && build_libva
 
-[[ ${ENABLE_YAMI}==true ]] && build_libyami_internal; build_libyami_utils
+[[ ${ENABLE_YAMI} == true ]] && build_libyami_internal; build_libyami_utils
 
-if [[ ${ENABLE_GST}==true ]]; then
+if [[ ${ENABLE_GST} == true ]]; then
 	#cd $workpath
 	#[ ! -d ${GST_SRC_PATH} ] && mkdir ${GST_SRC_PATH}
 	#cd ${GST_SRC_PATH}
