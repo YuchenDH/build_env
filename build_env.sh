@@ -525,7 +525,7 @@ do
 
 		if [[ $#=1 ]]; then
 			read -r -p "Update all components? [Y/n]" reply
-			[[ "$reply" =~ ^[Yy]$ ]] && UPDATE_FLAG=0 || echo "Please re-type your command." && exit 1
+			[[ "$reply" =~ ^[Yy]$ ]] && UPDATE_FLAG=0 || echo "Ommitting update option"
 		
 
 		else
@@ -533,39 +533,39 @@ do
 			do
 				case $1 in
 					libyami )
-					UPDATE_FLAG=1
+					UPDATE_FLAG="libyami"
 					shift 2
 						;;
 					
 					libva )
-					UPDATE_FLAG=2
+					UPDATE_FLAG="libva"
 					shift 2
 						;;
 
 					libva—utils )
-					UPDATE_FLAG=3
+					UPDATE_FLAG="libva-utils"
 					shift 2
 						;;
 
 					intel-vaapi-driver )
-					UPDATE_FLAG=4
+					UPDATE_FLAG="intel-vaapi-driver"
 					shift 2
 						;;
 
-					libyami_utils )
-					UPDATE_FLAG=5
+					libyami-utils )
+					UPDATE_FLAG="libyami-utils"
 					shift 2
 						;;
 
-					gst_vaapi )
-					UPDATE_FLAG=6
+					gst-vaapi|gstreamer-vaapi )
+					UPDATE_FLAG="gstreamer-vaapi"
 					shift 2
 						;;
 
 					* )
 					echo "Unknown component name!"
 					echo "Usage: -u|--update [COMPONENT_NAME]"
-					echo "Components include libyami, libyami_utils, libva, intel-vaapi-driver, gst_vaapi"
+					echo "Components include libyami, libyami-utils, libva, libva-utils, intel-vaapi-driver, gst-vaapi"
 					exit -1
 						;;
 				esac
@@ -602,11 +602,11 @@ done
 update()
 {
 	case UPDATE_FLAG in
-		0)
+		"all" )
 		#update_all
 			;;
 
-		1)
+		"libyami" )
 		echo  -e "\n---update ${CURRENT_PATH}/libyami---\n"
 		cd ${CURRENT_PATH}/libyami
 		git fetch
@@ -622,7 +622,7 @@ update()
 		fi
 			;;
 
-		2)
+		"libva" )
 		echo -e "\n---update ${CURRENT_PATH}/libva---\n"
 		cd ${CURRENT_PATH}/libva
 		make uninstall
@@ -639,7 +639,7 @@ update()
 		fi
 			;;
 
-		3)
+		"libva-utils" )
 		echo -e "\n---update ${CURRENT_PATH}/libva—utils---\n"
 		cd ${CURRENT_PATH}/libva—utils
 		#make uninstall
@@ -659,26 +659,26 @@ update()
 		fi
 			;;
 
-		4)
+		"intel-vaapi-driver" )
 		echo -e "\n---update ${CURRENT_PATH}/intel-vaapi-driver---\n"
 		cd ${CURRENT_PATH}/intel-vaapi-driver
 		#make uninstall
 		git fetch
 		if [[ $(git rev-parse HEAD) == $(git rev-parse @{u}) ]]; then
-			echo "${CURRENT_PATH}/intel-vaapi-driver already up-tp-date."
-    		./autogen.sh --prefix=$VAAPI_PREFIX --enable-wayland --enable-hybrid-codec && make -j8 &&  make install
+		    echo "${CURRENT_PATH}/intel-vaapi-driver already up-tp-date."
+    		    ./autogen.sh --prefix=$VAAPI_PREFIX --enable-wayland --enable-hybrid-codec && make -j8 &&  make install
 		else
-			git pull && git clean -dxf
-    		./autogen.sh --prefix=$VAAPI_PREFIX --enable-wayland --enable-hybrid-codec && make -j8 &&  make install
-			if [ $? -ne 0 ]; then
+		    git pull && git clean -dxf
+    		    ./autogen.sh --prefix=$VAAPI_PREFIX --enable-wayland --enable-hybrid-codec && make -j8 &&  make install
+		    if [ $? -ne 0 ]; then
         		echo "Failed when building intel-vaapi-driver!"
         		exit -1
-			fi
-			echo -e "\nupdate ${CURRENT_PATH}/intel-vaapi-driver completed"
+		    fi
+		    echo -e "\nupdate ${CURRENT_PATH}/intel-vaapi-driver completed"
 		fi
 			;;
 
-		5)
+		"libyami-utils" )
 		echo  -e "\n---build ${CURRENT_PATH}/libyami-utils ---\n"
 		cd ${CURRENT_PATH}/libyami-utils
 		git fetch
@@ -687,32 +687,31 @@ update()
 		else
 			git pull && git clean -dxf && ./autogen.sh --prefix=$LIBYAMI_PREFIX --enable-dmabuf --enable-v4l2 --enable-tests-gles --enable-avformat && make -j8 && make install
 			if [ $? -ne 0 ]; then
-        		echo "Failed when building libva-utils!"
+        		echo "Failed when building libyami-utils!"
         		exit -1
 			fi
-			echo -e "\nupdate ${CURRENT_PATH}/libva—utils completed"
+			echo -e "\nupdate ${CURRENT_PATH}/libyami—utils completed"
 		fi
 			;;
 
-		6)
+		"gstreamer-vaapi" )
 		echo -e "\n---build ${GST_SRC_PATH}/gstreamer-vaapi/ ---\n"
 		cd ${GST_SRC_PATH}/gstreamer-vaapi
 		git fetch
 		if [[ $(git rev-parse HEAD) == $(git rev-parse @{u}) ]]; then
 			echo "${GST_SRC_PATH}/gstreamer-vaapi is already up-tp-date."
 		else
-			git pull && git clean -dxf && ./autogen.sh --prefix=${GST_VAAPI} ${GST_VAAPI_OPTION} && make -j8 && make install
+			git pull && git clean -dxf && ./autogen.sh --prefix=${GST_VAAPI_PREFIX} ${GST_VAAPI_OPTION} && make -j8 && make install
 			if [ $? -ne 0 ]; then
-        		    echo "Failed when building gst-vaapi!"
+        		    echo "Failed when building gstreamer-vaapi!"
         		    exit -1
 			fi
-			echo -e "\nupdate ${CURRENT_PATH}/libva—utils completed"
+			echo -e "\nupdate ${GST_SRC_PATH}/gstreamer-vaapi completed"
 		fi
 		;;
 
-		*)
+		* )
 		    echo -e "Error: Unknown update component!"
-		    exit -1
 		;;
 	esac
 }
