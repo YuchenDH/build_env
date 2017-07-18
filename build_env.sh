@@ -35,8 +35,8 @@ export LIBYAMI_OPTION="--enable-vp8dec --enable-vp9dec --enable-jpegdec --enable
 export LIBYAMI_UTILS_OPTION="--enable-dmabuf --enable-v4l2 --enable-tests-gles --enable-avformat"
 
 #gst installlation configuration
-export GST_SRC_PATH="$workpath/src/gstreamer"
-export GSTREAMER_INSTALL_PATH="/opt/X11R7/gstreamer10"
+export GST_SRC_PATH="$workpath/src"
+export GSTREAMER_INSTALL_PATH="/opt/test/X11R7/gstreamer10"
 
 GST_PREFIX="${GSTREAMER_INSTALL_PATH}/"
 GST_OPTION="--enable-gtk-doc=no"
@@ -347,7 +347,7 @@ show_details(){
 build_gst(){
 	echo "============Building gstreamer============"
 	echo "Changing into ${GST_SRC_PATH}/gstreamer/"
-	cd gstreamer
+	cd ${GST_SRC_PATH}/gstreamer
 	#git pull && git clean -dxf
 	./autogen.sh --prefix=${GST_PREFIX} ${GST_OPTION} && make -j32 && make install
 	if [ $? -ne 0 ]; then
@@ -361,7 +361,7 @@ build_gst(){
 build_gst_base(){
 	echo "========Building gst-plugins-base========="
 	echo "Moving into ${GST_SRC_PATH}/gst-plugins-base/"
-	cd gst-plugins-base
+	cd ${GST_SRC_PATH}/gst-plugins-base
 	#git checkout -t origin/$BRANCH || true
 	#sudo make uninstall || true
 	#git pull && git clean -dxf
@@ -377,7 +377,7 @@ build_gst_base(){
 build_gst_good(){
 	echo "=========Building gst-plugins-good========"
 	echo "Moving into ${GST_SRC_PATH}/gst-plugins-good/"
-	cd gst-plugins-good
+	cd ${GST_SRC_PATH}/gst-plugins-good
 	#git checkout -t origin/$BRANCH || true
 	#sudo make uninstall || true
 	#git pull && git clean -dxf
@@ -393,7 +393,7 @@ build_gst_good(){
 build_gst_ugly(){
 	echo "=========Building gst-plugins-ugly========"
 	echo "Moving into ${GST_SRC_PATH}/gst-plugins-ugly/"
-	cd gst-plugins-ugly
+	cd ${GST_SRC_PATH}/gst-plugins-ugly
 	#git checkout -t origin/$BRANCH || true
 	#sudo make uninstall || true
 	#git pull && git clean -dxf
@@ -409,10 +409,7 @@ build_gst_ugly(){
 build_gst_bad(){
 	echo "=========Building gst-plugins-bad========="
 	echo "Moving into ${GST_SRC_PATH}/gst-plugins-bad/"
-	cd gst-plugins-bad
-	if [[ ${GST_VAAPI_TAG} ]]; then
-	    git reset ${GST_VAAPI_TAG} --hard
-	fi
+	cd ${GST_SRC_PATH}/gst-plugins-bad
 	./autogen.sh --prefix=${GST_BAD_PREFIX} ${GST_BAD_OPTION} && make -j8 && make install
 	make && make install
 	if [ $? -ne 0 ]; then
@@ -426,10 +423,14 @@ build_gst_bad(){
 build_gst_vaapi(){
 	echo "============Building gst-vaapi==========="
 	echo "Moving into ${GST_SRC_PATH}/gstreamer-vaapi/"
-	cd gstreamer-vaapi
+	cd ${GST_SRC_PATH}/gstreamer-vaapi
 	#sudo make uninstall || true
 	#git pull && git clean -dxf
-	./autogen.sh --prefix=${GST_VAAPI} ${GST_VAAPI_OPTION} && make -j8 && make install
+        if [[ ${GST_VAAPI_TAG} ]]; then
+                git reset ${GST_VAAPI_TAG} --hard
+        fi
+	
+        ./autogen.sh --prefix=${GST_VAAPI_PREFIX} ${GST_VAAPI_OPTION} && make -j8 && make install
 	if [ $? -ne 0 ]; then
 	        echo "Failed when building gst-vaapi!"
 	        exit -1
@@ -439,6 +440,13 @@ build_gst_vaapi(){
 }
 
 build_gst_all(){
+    if [ -d $GSTREAMER_INSTALL_PATH ]; then
+        cd $GSTREAMER_INSTALL_PATH
+    else
+        mkdir $GSTREAMER_INSTALL_PATH
+        cd $GSTREAMER_INSTALL_PATH
+    fi
+
     build_gst
     build_gst_base
     build_gst_good
@@ -720,7 +728,7 @@ fi
 
 [[ ${ENABLE_VAAPI} == true ]] && build_libva
 
-[[ ${ENABLE_YAMI} == true ]] && build_libyami_internal; build_libyami_utils
+[[ ${ENABLE_YAMI} == true ]] && build_libyami_internal && build_libyami_utils
 
 if [[ ${ENABLE_GST} == true ]]; then
 	#cd $workpath
