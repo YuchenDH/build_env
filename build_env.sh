@@ -1,6 +1,6 @@
 #!/bin/bash
-#set -e
-set -x
+set -e
+#set -x
 
 #This is current installing path
 export workpath="/opt/test"
@@ -18,6 +18,7 @@ DAY=`date +"%Y-%m-%d-%H-%M"`
 export ENABLE_VAAPI=true
 export ENABLE_YAMI=true
 export ENABLE_GST=false
+
 export INIT_FLAG=false
 
 #libva installation configuration
@@ -57,9 +58,9 @@ showhelp()
 {
 	echo "Usage: -v|--version [COMPONENT_NAME] [GIT_TAG|COMMIT]	Changing version of specified components"
 	echo "		 -f|--force 									Force re-installation or update"
-	echo "       -u|--update [COMPONENT_NAME] 					Update the specified componnets to latest commit. If not specified, update all enabled components"
+	echo "       -u|--update [COMPONENT_NAME|all] 				Update the specified componnets to latest commit."
 	echo
-	echo "       -s|--sourcing 									Generate and update pathcontrol.env file in workpath. "
+	echo "       -s|--source 									Generate and update pathcontrol.env file in workpath. "
 	echo "														Note that sourcing is only available within this script. For out-of-this-program usage of components, "
 	echo "														please do \"source $workpath/pathcontrol.env\""
 	echo
@@ -161,12 +162,10 @@ sourcing()
 		echo "========================================================================="
 	fi
 
-	if [[ -s pathcontrol.env ]]; then
-		echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH" > pathcontrol.env
-		echo "PKG_CONTROL_PATH=$PKG_CONFIG_PATH" >> pathcontrol.env
-		echo "PATH=$PATH" >> pathcontrol.env
-		echo "export LD_LIBRARY_PATH PKG_CONFIG_PATH PATH">> pathcontrol.env
-	fi
+	echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH" > pathcontrol.env
+	echo "PKG_CONTROL_PATH=$PKG_CONFIG_PATH" >> pathcontrol.env
+	echo "PATH=$PATH" >> pathcontrol.env
+	echo "export LD_LIBRARY_PATH PKG_CONFIG_PATH PATH">> pathcontrol.env
 }
 
 setenv()
@@ -522,52 +521,104 @@ do
 
 		-u|--update )
 		shift
+		while [ $# -gt 1]
+		do
+			case $1 in
+				"libyami" )
+				echo  -e "\n---update ${CURRENT_PATH}/libyami---\n"
+				cd ${CURRENT_PATH}/libyami
+				git fetch
+				if [[ $(git rev-parse HEAD) == $(git rev-parse @{u}) ]]; then
+					echo "${CURRENT_PATH}/libyami already up-tp-date."
+				else
+					build_libyami_internal
+					echo -e "\nupdate ${CURRENT_PATH}/libyami completed"
+				fi
+					;;
 
-		if [[ $#=1 ]]; then
-			read -r -p "Update all components? [Y/n]" reply
-			[[ "$reply" =~ ^[Yy]$ ]] && UPDATE_FLAG=0 || echo "Ommitting update option"
-		
+				"libva" )
+				echo -e "\n---update ${CURRENT_PATH}/libva---\n"
+				cd ${CURRENT_PATH}/libva
+				make uninstall
+				git fetch
+				if [[ $(git rev-parse HEAD) == $(git rev-parse @{u}) ]]; then
+					echo "${CURRENT_PATH}/libva already up-tp-date."
+				else
+					git pull && git clean -dxf && ./autogen.sh --subdir-objects --prefix=$VAAPI_PREFIX $LIBVA_OPTION && make -j8 &&  make install
+					if [ $? -ne 0 ]; then
+		        		echo "Failed when building libva!"
+		        		exit -1
+					fi
+					echo -e "\nupdate ${CURRENT_PATH}/libva completed"
+				fi
+					;;
 
-		else
-			while [ $# -gt 1]
-			do
-				case $1 in
-					libyami )
-					UPDATE_FLAG="libyami"
-					shift 2
-						;;
-					
-					libva )
-					UPDATE_FLAG="libva"
-					shift 2
-						;;
+				"libva-utils" )
+				echo -e "\n---update ${CURRENT_PATH}/libva—utils---\n"
+				cd ${CURRENT_PATH}/libva—utils
+				#make uninstall
+				git fetch
+				if [[ $(git rev-parse HEAD) == $(git rev-parse @{u}) ]]; then
+					echo "${CURRENT_PATH}/libva already up-tp-date."
+					git clean -dxf
+					#make install
+				else
+					git pull && git clean -dxf
+					#make install
+					if [ $? -ne 0 ]; then
+			       		echo "Failed when building libva-utils!"
+			       		exit -1
+					fi
+					#echo -e "\nupdate ${CURRENT_PATH}/libva-utils completed"
+				fi
+					;;
 
-					libva—utils )
-					UPDATE_FLAG="libva-utils"
-					shift 2
-						;;
+				"intel-vaapi-driver" )
+				echo -e "\n---update ${CURRENT_PATH}/intel-vaapi-driver---\n"
+				cd ${CURRENT_PATH}/intel-vaapi-driver
+				#make uninstall
+				git fetch
+				if [[ $(git rev-parse HEAD) == $(git rev-parse @{u}) ]]; then
+				    echo "${CURRENT_PATH}/intel-vaapi-driver already up-tp-date."
+			   		    ./autogen.sh --prefix=$VAAPI_PREFIX --enable-wayland --enable-hybrid-codec && make -j8 &&  make install
+				else
+				    git pull && git clean -dxf
+			   		    ./autogen.sh --prefix=$VAAPI_PREFIX --enable-wayland --enable-hybrid-codec && make -j8 &&  make install
+				    if [ $? -ne 0 ]; then
+			       		echo "Failed when building intel-vaapi-driver!"
+			       		exit -1
+				    fi
+				    echo -e "\nupdate ${CURRENT_PATH}/intel-vaapi-driver completed"
+				fi
+					;;
 
-					intel-vaapi-driver )
-					UPDATE_FLAG="intel-vaapi-driver"
-					shift 2
-						;;
+				"libyami-utils" )
+				echo  -e "\n---build ${CURRENT_PATH}/libyami-utils ---\n"
+				cd ${CURRENT_PATH}/libyami-utils
+				git fetch
+				if [[ $(git rev-parse HEAD) == $(git rev-parse @{u}) ]]; then
+					echo "${CURRENT_PATH}/intel-vaapi-driver already up-tp-date."
+				else
+					build_libyami_utils
+					echo -e "\nupdate ${CURRENT_PATH}/libyami—utils completed"
+				fi
+					;;
+	
+				"gstreamer-vaapi" )
+				echo -e "\n---build ${GST_SRC_PATH}/gstreamer-vaapi/ ---\n"
+				cd ${GST_SRC_PATH}/gstreamer-vaapi
+				git fetch
+				if [[ $(git rev-parse HEAD) == $(git rev-parse @{u}) ]]; then
+					echo "${GST_SRC_PATH}/gstreamer-vaapi is already up-tp-date."
+				else
+					build_gst_vaapi
+					echo "\nupdate ${GSTREAMER_INSTALL_PATH}/gstreamer-vaapi completed"
+				fi
+					;;
 
-					libyami-utils )
-					UPDATE_FLAG="libyami-utils"
-					shift 2
-						;;
-
-					gst-vaapi|gstreamer-vaapi )
-					UPDATE_FLAG="gstreamer-vaapi"
-					shift 2
-						;;
-
-					* )
-					echo "Unknown component name!"
-					echo "Usage: -u|--update [COMPONENT_NAME]"
-					echo "Components include libyami, libyami-utils, libva, libva-utils, intel-vaapi-driver, gst-vaapi"
-					exit -1
-						;;
+				* )
+				break
+					;;
 				esac
 			done
 		fi
@@ -599,131 +650,12 @@ do
 	esac
 done
 
-update()
-{
-	case UPDATE_FLAG in
-		"all" )
-		#update_all
-			;;
-
-		"libyami" )
-		echo  -e "\n---update ${CURRENT_PATH}/libyami---\n"
-		cd ${CURRENT_PATH}/libyami
-		git fetch
-		if [[ $(git rev-parse HEAD) == $(git rev-parse @{u}) ]]; then
-			echo "${CURRENT_PATH}/libyami already up-tp-date."
-		else
-			git pull && git clean -dxf && ./autogen.sh --prefix=$LIBYAMI_PREFIX $LIBYAMI_OPTION && make -j8 && make install
-			if [ $? -ne 0 ]; then
-        		echo "Failed when building libyami!"
-        		exit -1
-			fi
-			echo -e "\nupdate ${CURRENT_PATH}/libyami completed"
-		fi
-			;;
-
-		"libva" )
-		echo -e "\n---update ${CURRENT_PATH}/libva---\n"
-		cd ${CURRENT_PATH}/libva
-		make uninstall
-		git fetch
-		if [[ $(git rev-parse HEAD) == $(git rev-parse @{u}) ]]; then
-			echo "${CURRENT_PATH}/libva already up-tp-date."
-		else
-			git pull && git clean -dxf && ./autogen.sh --subdir-objects --prefix=$VAAPI_PREFIX $LIBVA_OPTION && make -j8 &&  make install
-			if [ $? -ne 0 ]; then
-        		echo "Failed when building libva!"
-        		exit -1
-			fi
-			echo -e "\nupdate ${CURRENT_PATH}/libva completed"
-		fi
-			;;
-
-		"libva-utils" )
-		echo -e "\n---update ${CURRENT_PATH}/libva—utils---\n"
-		cd ${CURRENT_PATH}/libva—utils
-		#make uninstall
-		git fetch
-		if [[ $(git rev-parse HEAD) == $(git rev-parse @{u}) ]]; then
-			echo "${CURRENT_PATH}/libva already up-tp-date."
-			git clean -dxf
-			#make install
-		else
-			git pull && git clean -dxf
-			#make install
-			if [ $? -ne 0 ]; then
-        		echo "Failed when building libva-utils!"
-        		exit -1
-			fi
-			#echo -e "\nupdate ${CURRENT_PATH}/libva-utils completed"
-		fi
-			;;
-
-		"intel-vaapi-driver" )
-		echo -e "\n---update ${CURRENT_PATH}/intel-vaapi-driver---\n"
-		cd ${CURRENT_PATH}/intel-vaapi-driver
-		#make uninstall
-		git fetch
-		if [[ $(git rev-parse HEAD) == $(git rev-parse @{u}) ]]; then
-		    echo "${CURRENT_PATH}/intel-vaapi-driver already up-tp-date."
-    		    ./autogen.sh --prefix=$VAAPI_PREFIX --enable-wayland --enable-hybrid-codec && make -j8 &&  make install
-		else
-		    git pull && git clean -dxf
-    		    ./autogen.sh --prefix=$VAAPI_PREFIX --enable-wayland --enable-hybrid-codec && make -j8 &&  make install
-		    if [ $? -ne 0 ]; then
-        		echo "Failed when building intel-vaapi-driver!"
-        		exit -1
-		    fi
-		    echo -e "\nupdate ${CURRENT_PATH}/intel-vaapi-driver completed"
-		fi
-			;;
-
-		"libyami-utils" )
-		echo  -e "\n---build ${CURRENT_PATH}/libyami-utils ---\n"
-		cd ${CURRENT_PATH}/libyami-utils
-		git fetch
-		if [[ $(git rev-parse HEAD) == $(git rev-parse @{u}) ]]; then
-			echo "${CURRENT_PATH}/intel-vaapi-driver already up-tp-date."
-		else
-			git pull && git clean -dxf && ./autogen.sh --prefix=$LIBYAMI_PREFIX --enable-dmabuf --enable-v4l2 --enable-tests-gles --enable-avformat && make -j8 && make install
-			if [ $? -ne 0 ]; then
-        		echo "Failed when building libyami-utils!"
-        		exit -1
-			fi
-			echo -e "\nupdate ${CURRENT_PATH}/libyami—utils completed"
-		fi
-			;;
-
-		"gstreamer-vaapi" )
-		echo -e "\n---build ${GST_SRC_PATH}/gstreamer-vaapi/ ---\n"
-		cd ${GST_SRC_PATH}/gstreamer-vaapi
-		git fetch
-		if [[ $(git rev-parse HEAD) == $(git rev-parse @{u}) ]]; then
-			echo "${GST_SRC_PATH}/gstreamer-vaapi is already up-tp-date."
-		else
-			git pull && git clean -dxf && ./autogen.sh --prefix=${GST_VAAPI_PREFIX} ${GST_VAAPI_OPTION} && make -j8 && make install
-			if [ $? -ne 0 ]; then
-        		    echo "Failed when building gstreamer-vaapi!"
-        		    exit -1
-			fi
-			echo -e "\nupdate ${GST_SRC_PATH}/gstreamer-vaapi completed"
-		fi
-		;;
-
-		* )
-		    echo -e "Error: Unknown update component!"
-		;;
-	esac
-}
-
 setenv
 
 if [[ $INIT_FLAG == true ]]; then
 	[[ $ENABLE_GST == true ]] && init_gst
 	init
 fi
-
-[[ -n ${UPDATE_FLAG} ]] && update
 
 [[ ${ENABLE_VAAPI} == true ]] && build_libva
 
