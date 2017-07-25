@@ -1,6 +1,6 @@
 #!/bin/bash
-set -e
-#set -x
+#set -e
+set -x
 
 #This is current installing path
 export workpath="/opt/test"
@@ -35,10 +35,10 @@ export LIBVA_OPTION=""
 export INTEL_VAAPI_DRIVER_OPTION="--enable-wayland --enable-hybrid-codec"
 
 #libyami installation configuration
-export YAMI_ROOT_DIR="${CURRENT_PATH}/yami"
+export YAMI_ROOT_DIR="${CURRENT_PATH}/libyami"
 export LIBYAMI_GIT="https://github.com/01org/libyami.git"
 export LIBYAMI_UTILS_GIT="https://github.com/01org/libyami-utils.git"
-export LIBYAMI_PREFIX="${YAMI_ROOT_DIR}/libyami"
+export LIBYAMI_PREFIX="${CURRENT_PATH}/yami"
 export LIBYAMI_OPTION="--enable-vp8dec --enable-vp9dec --enable-jpegdec --enable-h264dec --enable-h265dec \
                        --enable-h264enc --enable-jpegenc --enable-vp8enc --enable-h265enc --enable-mpeg2dec \
                        --enable-vc1dec --enable-mpeg2dec --enable-vc1dec --enable-vp9enc --enable-v4l2"
@@ -95,7 +95,7 @@ showhelp()
     echo "       -q|--quick                                     Enable quick install by adding --single-branch as git option"
     echo "       -u|--update [COMPONENT_NAME|all]               Update the specified componnets to latest commit."
     echo
-    echo "       -s|--source                                    Generate and update $ENV_FILE file in workpath. "
+    echo "       -e|--env                                       Generate and update $ENV_FILE file in workpath. "
     echo "                                                      Note that sourcing is only available within this script. For out-of-this-program usage of components, "
     echo "                                                      please do \"source $ENV_FILE\""
     echo
@@ -232,12 +232,16 @@ function ginstaller()
     COMP_TAG=$4
     COMP_PREFIX=$5
     COMP_OPTION=$6
-
-    if [[ -d $COMP_NAME ]];then
+    
+    [ ! -d $CURRENT_PATH ] && mkdir $CURRENT_PATH
+ 
+    cd $CURRENT_PATH
+    if [ -d $COMP_NAME ]; then
         cd $COMP_NAME
         git pull && git clean -dxf
         cd ..
     else
+        echo "$CURRENT_PATH/$COMP_NAME doesn\'t exist"
         git clone $QUICK_INSTALL $GIT_SRC
     fi
 
@@ -262,12 +266,6 @@ show_details(){
     libva_ver=`git log |head -n 5 |grep commit|less |awk '{print $2}'`
     cd $VAAPI_ROOT_DIR/intel-vaapi-driver
     intel_driver_ver=`git log |head -n 5 |grep commit|less |awk '{print $2}'`
-    #cd ${CURRENT_PATH}/cmrt
-    #cmrt_ver=`git log |head -n 5 |grep commit|less |awk '{print $2}'`
-    #cd ${CURRENT_PATH}/intel-hybrid-driver
-    #hybrid_ver=`git log |head -n 5 |grep commit|less |awk '{print $2}'`
-    #cd ${CURRENT_PATH}/ffmpeg
-    #ffmpeg_ver=`git log |head -n 5 |grep commit|less |awk '{print $2}'`
     cd ${YAMI_ROOT_DIR}/libyami
     libyami_ver=`git log |head -n 5 |grep commit|less |awk '{print $2}'`
     echo "environment build SW ditials list:" > $LOG_FILE
@@ -282,16 +280,16 @@ show_details(){
     echo `cat $LOG_FILE`
 }
 
-gst_install_all{
+gst_install_all(){
     ginstaller $GST_SRC_PATH gstreamer $GSTRAMER_GIT "HEAD" $GST_PREFIX $GST_OPTION
     ginstaller $GST_SRC_PATH gst-plugins-base $GST_BASE_GIT "HEAD" $GST_BASE_PREFIX $GST_BASE_OPTION
     ginstaller $GST_SRC_PATH gst-plugins-good $GST_GOOD_GIT "HEAD" $GST_GOOD_PREFIX $GST_GOOD_OPTION
     ginstaller $GST_SRC_PATH gst-plugins-ugly $GST_UGLY_GIT "HEAD" $GST_UGLY_PREFIX $GST_UGLY_OPTION
     ginstaller $GST_SRC_PATH gst-plugins-bad $GST_BAD_GIT "HEAD" $GST_BAD_PREFIX $GST_BAD_OPTION
-    ginstaller $GST_SRC_PATH gst-vaapi $GST_VAAPI_GIT $GST_VAAPI_TAG $GST_VAAPI_PREFIX $GST_VAAPI_OPTION
+    ginstaller $GST_SRC_PATH gst-vaapi $GST_VAAPI_GIT "HEAD" $GST_VAAPI_PREFIX $GST_VAAPI_OPTION
 }
 
-function sinstaller()
+sinstaller()
 {
     #sinstaller install component from a given source path. The path should be a git path if comp_tag is enabled
     #Usage: sinstaller [component-name] [source-path(where autogen.sh is)] [component-tag] [component-prefix] [component-option]
@@ -337,38 +335,43 @@ do
 
         -v|--version )
         shift
-        while [ $# -gt 1]
+        while [ $# -gt 1 ]
         do
             case $1 in
                 libyami )
                 export LIBYAMI_TAG="$2"
                 shift 2
+                ginstaller $YAMI_ROOT_DIR libyami $LIBYAMI_GIT $LIBYAMI_TAG $LIBYAMI_PREFIX $LIBYAMI_OPTION
                     ;;
                 
                 libva )
                 export LIBVA_TAG="$2"
                 shift 2
+                ginstaller $VAAPI_ROOT_DIR libva $LIBVA_GIT $LIBVA_TAG $VAAPI_PREFIX $LIBVA_OPTION
                     ;;
 
-                libva—utils )
+                libva-utils )
                 export LIBVA_UTILS_TAG="$2"
                 shift 2
+                ginstaller $VAAPI_ROOT_DIR libva-utils $LIBVA_UTILS_GIT $LIBVA_UTILS_TAG $VAAPI_PREFIX ""
                     ;;
 
                 intel-vaapi-driver )
                 export INTEL_VAAPI_DRIVER_TAG="$2"
                 shift 2
+                ginstaller $VAAPI_ROOT_DIR intel-vaapi-driver $INTEL_VAAPI_DRIVER_GIT $INTEL_VAAPI_DRIVER_TAG $VAAPI_PREFIX $INTEL_VAAPI_DRIVER_OPTION
                     ;;
 
-                libyami_utils )
+                libyami-utils )
                 export LIBYAMI_UTILS_TAG="$2"
                 shift 2
+                ginstaller $YAMI_ROOT_DIR libyami-utils $LIBYAMI_UTILS_GIT $LIBYAMI_UTILS_TAG $LIBYAMI_PREFIX $LIBYAMI_UTILS_OPTION
                     ;;
 
                 gst-vaapi|gstreamer-vaapi )
                 export GST_VAAPI_TAG="$2"
                 shift 2
-                if [[ $ENABLE_GST == false ]]; then
+                if [[ -d $GST_SRC_PATH ]]; then
                     echo "gstreamer is not enabled currently. Do you want to install all gstreamer components? If you have already installed gstreamer but forgot to enable it, please add --enable-gst at top [y/n]"
                     read resp
                     [[ $resp == "y" ]] && gst_install_all
@@ -381,85 +384,89 @@ do
                     ;;
 
                 * )
-                break
+                    break
                     ;;
             esac
         done
+        echo "Version control completed!"
+        show_details
+        exit 0
             ;;
-
-        -f|--force )
+        
+        -u | --update )
         shift
-        FORCE=true
-            ;;
-
-        -u|--update )
-        shift
-        while [ $# -gt 1]
+        while [ $# -gt 0 ]
         do
             case $1 in
                 "libva" )
+                shift
                 echo -e "\n===Checking update for ${VAAPI_ROOT_DIR}/libva===\n"
-                cd ${VAAPI_ROOT_DIR}/$1
+                cd ${VAAPI_ROOT_DIR}/libva
                 git fetch
                 if [[ $(git rev-parse HEAD) == $(git rev-parse @{u}) ]]; then
-                    echo "${CURRENT_PATH}/libva already up-tp-date."
+                    echo "${VAAPI_ROOT_DIR}/libva already up-tp-date."
                 else
-                    ginstaller $VAAPI_ROOT_DIR libva $LIBVA_GIT $LIBVA_TAG $VAAPI_PREFIX $LIBVA_OPTION
+                    ginstaller $VAAPI_ROOT_DIR "libva" $LIBVA_GIT "HEAD" $VAAPI_PREFIX $LIBVA_OPTION
                 fi
                     ;;
 
                 "libva-utils" )
+                shift
                 echo -e "\n===Checking update for ${VAAPI_ROOT_DIR}/libva—utils===\n"
                 cd ${VAAPI_ROOT_DIR}/$1
                 git fetch
                 if [[ $(git rev-parse HEAD) == $(git rev-parse @{u}) ]]; then
                     echo "${CURRENT_PATH}/libva already up-tp-date."
                 else
-                    ginstaller $VAAPI_ROOT_DIR libva-utils $LIBVA_UTILS_GIT $LIBVA_UTILS_TAG $VAAPI_PREFIX ""
+                    ginstaller $VAAPI_ROOT_DIR "libva-utils" $LIBVA_UTILS_GIT "HEAD" $VAAPI_PREFIX ""
                 fi
                     ;;
 
                 "intel-vaapi-driver" )
+                shift
                 echo -e "\n===Checking update for ${VAAPI_ROOT_DIR}/intel-vaapi-driver===\n"
                 cd ${VAAPI_ROOT_DIR}/$1
                 git fetch
                 if [[ $(git rev-parse HEAD) == $(git rev-parse @{u}) ]]; then
                     echo "${CURRENT_PATH}/intel-vaapi-driver already up-tp-date."
                 else
-                    ginstaller $VAAPI_ROOT_DIR intel-vaapi-driver $INTEL_VAAPI_DRIVER_GIT $INTEL_VAAPI_DRIVER_TAG $VAAPI_PREFIX $INTEL_VAAPI_DRIVER_OPTION
+                    ginstaller $VAAPI_ROOT_DIR "intel-vaapi-driver" $INTEL_VAAPI_DRIVER_GIT "HEAD" $VAAPI_PREFIX $INTEL_VAAPI_DRIVER_OPTION
                 fi
                     ;;
 
                 "libyami" )
+                shift
                 echo  -e "\n===Checking update for $YAMI_ROOT_DIR/$1===\n"
                 cd ${YAMI_ROOT_DIR}/$1
                 git fetch
                 if [[ $(git rev-parse HEAD) == $(git rev-parse @{u}) ]]; then
                     echo "${CURRENT_PATH}/libyami already up-tp-date."
                 else
-                    ginstaller $YAMI_ROOT_DIR libyami $LIBYAMI_GIT $LIBYAMI_TAG $LIBYAMI_PREFIX $LIBYAMI_OPTION
+                    ginstaller $YAMI_ROOT_DIR "libyami" $LIBYAMI_GIT "HEAD" $LIBYAMI_PREFIX $LIBYAMI_OPTION
                 fi
                     ;;
 
                 "libyami-utils" )
+                shift
                 echo  -e "\n===Checking update for ${CURRENT_PATH}/libyami-utils/ ===\n"
                 cd ${YAMI_ROOT_DIR}/$1
                 git fetch
                 if [[ $(git rev-parse HEAD) == $(git rev-parse @{u}) ]]; then
                     echo "${CURRENT_PATH}/intel-vaapi-driver already up-tp-date."
                 else
-                    ginstaller $YAMI_ROOT_DIR libyami-utils $LIBYAMI_UTILS_GIT $LIBYAMI_UTILS_TAG $LIBYAMI_PREFIX $LIBYAMI_UTILS_OPTION
+                    ginstaller $YAMI_ROOT_DIR "libyami-utils" $LIBYAMI_UTILS_GIT "HEAD" $LIBYAMI_PREFIX $LIBYAMI_UTILS_OPTION
                 fi
                     ;;
     
                 "gstreamer-vaapi" )
+                shift
                 echo -e "\n===Checking update for ${GST_SRC_PATH}/gstreamer-vaapi/ ===\n"
                 cd ${GST_SRC_PATH}/gstreamer-vaapi
                 git fetch
                 if [[ $(git rev-parse HEAD) == $(git rev-parse @{u}) ]]; then
                     echo "${GST_SRC_PATH}/gstreamer-vaapi is already up-tp-date."
                 else
-                    ginstaller $GST_SRC_PATH gst-vaapi $GST_VAAPI_GIT $GST_VAAPI_TAG $GST_VAAPI_PREFIX $GST_VAAPI_OPTION
+                    ginstaller $GST_SRC_PATH "gst-vaapi" $GST_VAAPI_GIT "HEAD" $GST_VAAPI_PREFIX $GST_VAAPI_OPTION
                 fi
                     ;;
 
@@ -468,12 +475,14 @@ do
                     ;;
                 esac
             done
-        fi
+            echo "Update completed!"
+            show_details
+            exit 0
+        
             ;;
         
-        -s|--source )
+        -e|--env )
         shift
-        echo "Sourcing..."
         echo "Generating $ENV_FILE..."
         sourcing
         exit 0
@@ -505,12 +514,12 @@ if [[ $INIT_FLAG == true ]]; then
     init
 fi
 
-[[ ${ENABLE_VAAPI} == true ]] && ginstaller $VAAPI_ROOT_DIR libva $LIBVA_GIT $LIBVA_TAG $VAAPI_PREFIX $LIBVA_OPTION \
-                               && ginstaller $VAAPI_ROOT_DIR libva-utils $LIBVA_UTILS_GIT $LIBVA_UTILS_TAG $VAAPI_PREFIX "" \ 
-                               && ginstaller $VAAPI_ROOT_DIR intel-vaapi-driver $INTEL_VAAPI_DRIVER_GIT $INTEL_VAAPI_DRIVER_TAG $VAAPI_PREFIX $INTEL_VAAPI_DRIVER_OPTION
+[[ ${ENABLE_VAAPI} == true ]] && ginstaller $VAAPI_ROOT_DIR "libva" $LIBVA_GIT "HEAD" $VAAPI_PREFIX $LIBVA_OPTION \
+                               && ginstaller $VAAPI_ROOT_DIR "libva-utils" $LIBVA_UTILS_GIT "HEAD" $VAAPI_PREFIX "" \ 
+                               && ginstaller $VAAPI_ROOT_DIR "intel-vaapi-driver" $INTEL_VAAPI_DRIVER_GIT "HEAD" $VAAPI_PREFIX $INTEL_VAAPI_DRIVER_OPTION
 
-[[ ${ENABLE_YAMI} == true ]] && ginstaller $YAMI_ROOT_DIR libyami $LIBYAMI_GIT $LIBYAMI_TAG $LIBYAMI_PREFIX $LIBYAMI_OPTION \ 
-                              && ginstaller $YAMI_ROOT_DIR libyami-utils $LIBYAMI_UTILS_GIT $LIBYAMI_UTILS_TAG $LIBYAMI_PREFIX $LIBYAMI_UTILS_OPTION
+[[ ${ENABLE_YAMI} == true ]] && ginstaller $YAMI_ROOT_DIR "libyami" $LIBYAMI_GIT "HEAD" $LIBYAMI_PREFIX $LIBYAMI_OPTION \ 
+                              && ginstaller $YAMI_ROOT_DIR "libyami-utils" $LIBYAMI_UTILS_GIT "HEAD" $LIBYAMI_PREFIX $LIBYAMI_UTILS_OPTION
 
 [[ ${ENABLE_GST} == true ]] && gst_install_all
 
