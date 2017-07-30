@@ -1,0 +1,2 @@
+g++ autoconf make libtool libdrm2 libdrm-intel1 libdrm-radeon1 stress htop libdrm-nouveau2 libdrm-dev texinfo build-essential intel-gpu-tools libx11-dev libv4l-dev libegl-mesa-dev libglu1-mesa-dev mesa-common-dev libgles2-mesa-dev libbsd-dev libav-tools libavcodec-dev libavformat-dev libswscale-dev libavutil-dev
+

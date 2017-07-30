@@ -24,6 +24,8 @@ export ENABLE_GST=false
 
 #default ommitting initialization
 export INIT_FLAG=false
+#default dependency
+export DEP_FILE=ubuntu.dep
 
 #libva installation configuration
 export VAAPI_ROOT_DIR="${CURRENT_PATH}/libva"
@@ -73,19 +75,19 @@ export QUICK_INSTALL=""
 
 showhelp()
 {
-    echo "##########################################################################"
-    echo "#                                                                        #"
-    echo "#     Author: Yuchen Wang, SJTU Capstone Design with Intel 2017          #"
-    echo "#                                                                        #"
-    echo "#     Co-authored with Fei Wang                                          #"
-    echo "#                                                                        #"
-    echo "##########################################################################"
-    echo "#                                                                        #"
-    echo "#     Important: Please try to follow the order of options as given!     #"
-    echo "#                                                                        #"
-    echo "#  If any kind of missing package error occurred, try adding -i option   #"
-    echo "#                                                                        #"
-    echo "##########################################################################"
+    echo "###################################################################################"
+    echo "#                                                                                 #"
+    echo "#             Author: Yuchen Wang, SJTU Capstone Design with Intel 2017           #"
+    echo "#                                                                                 #"
+    echo "#             Co-authored with Fei Wang                                           #"
+    echo "#                                                                                 #"
+    echo "###################################################################################"
+    echo "#                                                                                 #"
+    echo "#          Important: Please try to follow the order of options as given!         #"
+    echo "#                                                                                 #"
+    echo "#      If any kind of missing package error occurred, try adding -i option        #"
+    echo "#                                                                                 #"
+    echo "###################################################################################"
 
     echo "Usage: -v|--version [COMPONENT_NAME] [GIT_TAG|COMMIT] Changing version of specified components"
     echo "       --disable-vaapi                                Will NOT install libva, libva-utils, intel-vaapi-driver. Set to YES by default."
@@ -96,24 +98,19 @@ showhelp()
     echo "       -u|--update [COMPONENT_NAME|all]               Update the specified componnets to latest commit."
     echo
     echo "       -e|--env                                       Generate and update $ENV_FILE file in workpath. "
-    echo "                                                      Note that sourcing is only available within this script. For out-of-this-program usage of components, "
-    echo "                                                      please do \"source $ENV_FILE\""
+    echo "                                                      Note that sourcing is only available within this script. For out-of-this-program  "
+    echo "                                                      usage of components, please do \"source $ENV_FILE\""
     echo
-    echo "       --status                                       Show current installation details. Also generage $LOG_FILE"
-    echo "       -i|--initialize                                Initial install for fresh-installed linux"
+    echo "       --status                                       Show current installation details. Also generates $LOG_FILE"
+    echo "       -i|--initialize [DEPENDENCY_FILE]              Initial install for fresh-installed OS. Add --enable-gstreamer to install gst dependency."
+    echo "                                                      gst dependency should be named separately by adding \".gst\""
+    echo "                                                      Name example: ubuntu16.04.dep & ubuntu16.04.dep.gst"
 }
 
 init()
 {
     echo "==========Installing basic system requirement=========="
-    apt-get install -y --force-yes g++ autoconf make libtool libdrm2 libdrm-intel1 libdrm-radeon1 \
-                    libdrm-nouveau2 libdrm-dev texinfo build-essential intel-gpu-tools
-    #apt-get install libexpat-dev libxml2-dev
-    apt-get install -y --force-yes libx11-dev libv4l-dev libegl-mesa-dev \
-                    libglu1-mesa-dev mesa-common-dev libgles2-mesa-dev \
-                    libbsd-dev libav-tools
-    #installing requirements for libyami
-    apt-get install -y --force-yes libavcodec-dev libavformat-dev libswscale-dev libavutil-dev
+        cat "`dirname $0`/$DEP_FILE" | apt-get install -y --force-yes
 
     #echo "Installing libffi as a part of wayland"
     #git clone git://github.com/atgreen/libffi.git --single-branch
@@ -129,27 +126,7 @@ init_gst(){
     grep -q BCM2708 /proc/cpuinfo && sudo apt-get update && sudo apt-get upgrade -y --force-yes
 
     # Get the required libraries
-    apt-get install -y --force-yes  build-essential autotools-dev \
-                                    libtool autopoint libxml2-dev zlib1g-dev libglib2.0-dev \
-                                    pkg-config bison flex python3 gtk-doc-tools libasound2-dev \
-                                    libgudev-1.0-dev libxt-dev libvorbis-dev libcdparanoia-dev \
-                                    libpango1.0-dev libtheora-dev libvisual-0.4-dev iso-codes \
-                                    libgtk-3-dev libraw1394-dev libiec61883-dev libavc1394-dev \
-                                    libv4l-dev libcairo2-dev libcaca-dev libspeex-dev libpng-dev \
-                                    libshout3-dev libjpeg-dev libaa1-dev libflac-dev libdv4-dev \
-                                    libtag1-dev libwavpack-dev libpulse-dev libsoup2.4-dev libbz2-dev \
-                                    libcdaudio-dev libdc1394-22-dev ladspa-sdk libass-dev \
-                                    libcurl4-gnutls-dev libdca-dev libdirac-dev libdvdnav-dev \
-                                    libexempi-dev libexif-dev libfaad-dev libgme-dev libgsm1-dev \
-                                    libiptcdata0-dev libkate-dev libmimic-dev libmms-dev \
-                                    libmodplug-dev libmpcdec-dev libofa0-dev libopus-dev \
-                                    librsvg2-dev librtmp-dev libschroedinger-dev libslv2-dev \
-                                    libsndfile1-dev libsoundtouch-dev libspandsp-dev libx11-dev \
-                                    libxvidcore-dev libzbar-dev libzvbi-dev liba52-0.7.4-dev \
-                                    libcdio-dev libdvdread-dev libmad0-dev libmp3lame-dev \
-                                    libmpeg2-4-dev libopencore-amrnb-dev libopencore-amrwb-dev \
-                                    libsidplay1-dev libtwolame-dev libx264-dev libusb-1.0 \
-                                    python-gi-dev yasm python3-dev libgirepository1.0-dev
+    cat "`dirname $0`/${DEP_FILE}.gst" | apt-get install -y --force-yes
 }
 
 sourcing()
@@ -491,6 +468,7 @@ do
         -i|--initialize )
         shift
         INIT_FLAG=true
+        [[ $# -gt 1 & ${1:0:1} -ne "-" ]] && DEP_FILE=$1 && shift || echo "Please specify dependency file"
             ;;
 
         --status )
