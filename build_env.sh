@@ -2,17 +2,14 @@
 #set -e
 set -x
 
+#This is path of this file
+export folder=`pwd`
+
 #This is current installing path
-export workpath="/opt/test"
+export CURRENT_PATH="/opt/test"
 
-if [[ -d ${workpath} ]]; then
-    cd ${workpath}
-else
-    mkdir ${workpath}
-    cd ${workpath}
-fi
+[[ ! -d ${CURRENT_PATH} ]]; mkdir ${CURRENT_PATH}
 
-CURRENT_PATH=${workpath}
 ENV_FILE="$CURRENT_PATH/media.env"
 LOG_FILE="$CURRENT_PATH/log"
 DAY=`date +"%Y-%m-%d-%H-%M"`
@@ -24,6 +21,10 @@ export ENABLE_GST=false
 
 #default ommitting initialization
 export INIT_FLAG=false
+
+#default ommitting installed components
+export FORCE=false
+
 #default dependency
 export DEP_FILE=ubuntu.dep
 
@@ -33,7 +34,8 @@ export VAAPI_PREFIX="${CURRENT_PATH}/vaapi"
 export LIBVA_GIT="https://github.com/01org/libva.git"
 export LIBVA_UTILS_GIT="https://github.com/01org/libva-utils.git"
 export INTEL_VAAPI_DRIVER_GIT="https://github.com/01org/intel-vaapi-driver.git"
-export LIBVA_OPTION=""
+export LIBVA_OPTION=" "
+export LIBVA_UTILS_OPTION=" "
 export INTEL_VAAPI_DRIVER_OPTION="--enable-wayland --enable-hybrid-codec"
 
 #libyami installation configuration
@@ -105,12 +107,16 @@ showhelp()
     echo "       -i|--initialize [DEPENDENCY_FILE]              Initial install for fresh-installed OS. Add --enable-gstreamer to install gst dependency."
     echo "                                                      gst dependency should be named separately by adding \".gst\""
     echo "                                                      Name example: ubuntu16.04.dep & ubuntu16.04.dep.gst"
+    echo "       -f|--force                                     Force Re-installation even when source code folder is up-to-date"
 }
 
 init()
 {
-    echo "==========Installing basic system requirement=========="
-        cat "`dirname $0`/$DEP_FILE" | apt-get install -y --force-yes
+    echo "==========Installing basic system requirement with $1=========="
+        cat $1 | while read line
+        do
+            apt-get install -y --force-yes $line
+        done
 
     #echo "Installing libffi as a part of wayland"
     #git clone git://github.com/atgreen/libffi.git --single-branch
@@ -119,14 +125,6 @@ init()
     #echo "Installing waylad..."
     #git clone https://anongit.freedesktop.org/git/wayland/wayland.git --single-branch
     #cd wayland && ./autogen.sh --prefix="/opt/" --disable-documentation && make && make install && cd ..
-}
-
-init_gst(){
-    # Update and Upgrade the Pi, otherwise the build may fail due to inconsistencies
-    grep -q BCM2708 /proc/cpuinfo && sudo apt-get update && sudo apt-get upgrade -y --force-yes
-
-    # Get the required libraries
-    cat "`dirname $0`/${DEP_FILE}.gst" | apt-get install -y --force-yes
 }
 
 sourcing()
@@ -200,9 +198,9 @@ setenv()
     fi
 }
 
-function ginstaller()
+ginstaller()
 {
-    #ginstaller usage: ginstaller [current_path] [component_name] [git_address] [git_tag] [prefix] [option]
+    #ginstaller usage: ginstaller [current_path] [component_name] [git_address] [git_tag] [prefix] [option] [force-reinstall=0]
     CURRENT_PATH=$1
     COMP_NAME=$2
     GIT_SRC=$3
@@ -215,7 +213,11 @@ function ginstaller()
     cd $CURRENT_PATH
     if [ -d $COMP_NAME ]; then
         cd $COMP_NAME
-        git pull && git clean -dxf
+        git fetch
+        if [[ $(git rev-parse $COMP_TAG) == $(git rev-parse @{u}) && $FORCE == false ]]; then
+            echo "Required version of source code found, omitting reinstallation. You may force a re-installation by -f option"
+            return 0
+        fi
         cd ..
     else
         echo "$CURRENT_PATH/$COMP_NAME doesn\'t exist"
@@ -369,6 +371,11 @@ do
         show_details
         exit 0
             ;;
+
+        -f | --force )
+        shift
+        export FORCE=true
+            ;;
         
         -u | --update )
         shift
@@ -395,7 +402,7 @@ do
                 if [[ $(git rev-parse HEAD) == $(git rev-parse @{u}) ]]; then
                     echo "${CURRENT_PATH}/libva already up-tp-date."
                 else
-                    ginstaller $VAAPI_ROOT_DIR "libva-utils" $LIBVA_UTILS_GIT "HEAD" $VAAPI_PREFIX ""
+                    ginstaller $VAAPI_ROOT_DIR "libva-utils" $LIBVA_UTILS_GIT "HEAD" $VAAPI_PREFIX $LIBVA_UTILS_OPTION
                 fi
                     ;;
 
@@ -468,7 +475,7 @@ do
         -i|--initialize )
         shift
         INIT_FLAG=true
-        [[ $# -gt 1 & ${1:0:1} -ne "-" ]] && DEP_FILE=$1 && shift || echo "Please specify dependency file"
+        [[ $# -gt 0 && ${1:0:1} != "-" ]] && DEP_FILE=$1 && shift || echo "Please specify dependency file"
             ;;
 
         --status )
@@ -488,17 +495,16 @@ done
 setenv
 
 if [[ $INIT_FLAG == true ]]; then
-    [[ $ENABLE_GST == true ]] && init_gst
-    init
+    [[ $ENABLE_GST == true ]] && init "${folder}/${DEP_FILE}.gst"
+    init "${folder}/${DEP_FILE}"
 fi
 
-[[ ${ENABLE_VAAPI} == true ]] && ginstaller $VAAPI_ROOT_DIR "libva" $LIBVA_GIT "HEAD" $VAAPI_PREFIX $LIBVA_OPTION \
-                               && ginstaller $VAAPI_ROOT_DIR "libva-utils" $LIBVA_UTILS_GIT "HEAD" $VAAPI_PREFIX "" \ 
+[[ ${ENABLE_VAAPI} == true ]] && ginstaller $VAAPI_ROOT_DIR "libva" $LIBVA_GIT "HEAD" $VAAPI_PREFIX $LIBVA_OPTION\
+                               && ginstaller $VAAPI_ROOT_DIR "libva-utils" $LIBVA_UTILS_GIT "HEAD" $VAAPI_PREFIX $LIBVA_UTILS_OPTION\
                                && ginstaller $VAAPI_ROOT_DIR "intel-vaapi-driver" $INTEL_VAAPI_DRIVER_GIT "HEAD" $VAAPI_PREFIX $INTEL_VAAPI_DRIVER_OPTION
 
-[[ ${ENABLE_YAMI} == true ]] && ginstaller $YAMI_ROOT_DIR "libyami" $LIBYAMI_GIT "HEAD" $LIBYAMI_PREFIX $LIBYAMI_OPTION \ 
+[[ ${ENABLE_YAMI} == true ]] && ginstaller $YAMI_ROOT_DIR "libyami" $LIBYAMI_GIT "HEAD" $LIBYAMI_PREFIX $LIBYAMI_OPTION\ 
                               && ginstaller $YAMI_ROOT_DIR "libyami-utils" $LIBYAMI_UTILS_GIT "HEAD" $LIBYAMI_PREFIX $LIBYAMI_UTILS_OPTION
-
 [[ ${ENABLE_GST} == true ]] && gst_install_all
 
 show_details
